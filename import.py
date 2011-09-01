@@ -9,17 +9,17 @@ import MySQLdb
 import csv
 import ConfigParser, os
 
-config_file = ""
-csvfilename = ""
+ConfigFile = ""
+CSVFileName = ""
 AllowedCSVColumns = []
-assoc = dict()
+ColumnAssociations = dict()
 
 def main(config):
     #set global path for config, and csvfile
-    global config_file
-    global csvfilename
-    config_file = config
-    csvfilename = readconfig("CSV","file")
+    global ConfigFile
+    global CSVFileName
+    ConfigFile = config
+    CSVFileName = readconfig("CSV","file")
 
     #load configurations
     db = readconfig("Db","db")
@@ -51,7 +51,7 @@ def getconn(user, db, passwd=""):
     return conn
 
 def GetCSVColumns():
-    file_handle = open(csvfilename)
+    file_handle = open(CSVFileName)
     csvobj = csv.reader(file_handle)
     file_handle.seek(0)
     header = csvobj.next()
@@ -91,7 +91,7 @@ def GetDBColumnIndex(cursor,table,number=1):
 
 def GetSelectedDBColumns():
     col_list = ""
-    for key,value in assoc.items():
+    for key,value in ColumnAssociations.items():
         if value != 0:
             col_list = col_list + key + ","
     col_list = col_list[:-1]
@@ -116,11 +116,11 @@ def MainMenu(cursor,table):
                 MakeMenuDB(cursor,table)
             elif choice == 2:
                 #call the import functions
-                loadcsv(cursor,table,csvfilename)
+                loadcsv(cursor,table,CSVFileName)
     return
 
 def MakeMenuDB(cursor,table):
-    global assoc
+    global ColumnAssociations
     choice = 1
     while choice != 0:
         print "\n\n\n\n\n\n\n\n"
@@ -141,7 +141,7 @@ def MakeMenuDB(cursor,table):
             #got the table column, now call csv column generator, and get its column as well.
             csvcol = MakeMenuCSV(test)
 
-            assoc[test] = csvcol
+            ColumnAssociations[test] = csvcol
             PrintColumnsAssociation()
             #print assoc
             #print the associations now.
@@ -165,13 +165,13 @@ def MakeMenuCSV(column):
 
 def PrintColumnsAssociation():
     #print the current dictionary, and return.
-    for key,value in assoc.items():
+    for key,value in ColumnAssociations.items():
         print "Db Column:", key, "\t CSV Column:", value
     return
 
 def GetNumberOfFields():
     i = 0
-    for key,value in assoc.items():
+    for key,value in ColumnAssociations.items():
         if value != 0:
             i += 1
     return i
@@ -182,7 +182,7 @@ def GenerateAllowedCSVColumns():
     global AllowedCSVColumns
     del AllowedCSVColumns[:]
 
-    for key,value in assoc.items():
+    for key,value in ColumnAssociations.items():
         if value != 0:
             AllowedCSVColumns.append(value)
     return None
@@ -258,7 +258,7 @@ def readconfig(section,key):
     #now read configs
 
     configP = ConfigParser.ConfigParser()
-    configP.readfp(open(config_file))
+    configP.readfp(open(ConfigFile))
 
     return configP.get(section,key)
 
