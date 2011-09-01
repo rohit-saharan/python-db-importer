@@ -12,6 +12,7 @@ The original base of the code is from http://128.174.125.122/wiki/index.php/Pyth
 
 Just clone the repository, and run the import.py file.
 It requires the python-mysqldb package, to install that:
+
 `sudo apt-get install python-mysqldb`
 
 #Contact

@@ -11,14 +11,15 @@ import ConfigParser, os
 
 config_file = ""
 csvfilename = ""
+AllowedCSVColumns = []
 assoc = dict()
 
-def main(csvfile, config):
+def main(config):
     #set global path for config, and csvfile
     global config_file
     global csvfilename
-    csvfilename = csvfile
     config_file = config
+    csvfilename = readconfig("CSV","file")
 
     #load configurations
     db = readconfig("Db","db")
@@ -34,7 +35,7 @@ def main(csvfile, config):
 
     cursor = conn.cursor()
 
-    makemenucols(cursor,table)
+    MainMenu(cursor,table)
     buildInsertCmd(table)
 
     #loadcsv(cursor, table, csvfile)
@@ -49,7 +50,7 @@ def getconn(user, db, passwd=""):
                            db = db)
     return conn
 
-def getcsvcolumns():
+def GetCSVColumns():
     file_handle = open(csvfilename)
     csvobj = csv.reader(file_handle)
     file_handle.seek(0)
@@ -61,13 +62,13 @@ def getcsvcolumns():
     returnStr = returnStr.rstrip(",")
     return returnStr
 
-def getcsvcolnumber(number=1):
-    csvcols = getcsvcolumns()
+def GetCSVColumnIndex(number=1):
+    csvcols = GetCSVColumns()
     cols = csvcols.split(",")
     number = int(number) -1
     return cols[number]
 
-def getcolumns(cursor,table):
+def GetDBColumns(cursor,table):
     """
     generate the table columns string here, excluding the ones mentioned in the config file.
     """
@@ -75,22 +76,20 @@ def getcolumns(cursor,table):
     cursor.execute(query)
     columns = cursor.fetchall()
     col_string = ""
-    exclude = readconfig("Table","exclude")
     for x in columns:
-        if x[0] != exclude :
-            col_string = col_string + x[0] + ","
+        col_string = col_string + x[0] + ","
 
     col_string = col_string.rstrip(",")
     return col_string
 
-def getcolumnnumber(cursor,table,number=1):
+def GetDBColumnIndex(cursor,table,number=1):
     #get the number of column. return text.
-    cols = getcolumns(cursor,table)
+    cols = GetDBColumns(cursor,table)
     ret = cols.split(",")
     number = int(number) - 1
     return ret[number]
 
-def getselectedcolumns():
+def GetSelectedDBColumns():
     col_list = ""
     for key,value in assoc.items():
         if value != 0:
@@ -98,13 +97,35 @@ def getselectedcolumns():
     col_list = col_list[:-1]
     return col_list
 
-def makemenucols(cursor,table):
+def MainMenu(cursor,table):
+    #this is the main menu. Now generate the menu accordingly.
+    print "\n\n\n\n\n\n\n\n\n"
+    choice = 1
+    while choice != 0:
+        print "========================================"
+        print "==================Menu=================="
+        print "==============by geekrohit=============="
+        print "========================================"
+        print "= 1: Generate Associations"
+        print "= 2: Start Importing"
+        print "========================================"
+        choice = int(raw_input("= Choice [1]:"))
+        if choice != 0:
+            if choice == 1:
+                #now call MakeMenuDB.
+                MakeMenuDB(cursor,table)
+            elif choice == 2:
+                #call the import functions
+                loadcsv(cursor,table,csvfilename)
+    return
+
+def MakeMenuDB(cursor,table):
     global assoc
     choice = 1
     while choice != 0:
         print "\n\n\n\n\n\n\n\n"
         print "---- Database Tables:"
-        cols = getcolumns(cursor,table)
+        cols = GetDBColumns(cursor,table)
         ret = cols.split(",")
         i = 1
     
@@ -115,20 +136,20 @@ def makemenucols(cursor,table):
         choice = int(raw_input("Choice:"))
         print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
         if choice != 0:
-            test = getcolumnnumber(cursor,table,choice)
+            test = GetDBColumnIndex(cursor,table,choice)
             test = str(test)
             #got the table column, now call csv column generator, and get its column as well.
-            csvcol = makemenucsv(test)
+            csvcol = MakeMenuCSV(test)
 
             assoc[test] = csvcol
-            printassoc()
+            PrintColumnsAssociation()
             #print assoc
             #print the associations now.
     #print getcsvcolnumber(choice)
     return 
     
-def makemenucsv(column):
-    cols = getcsvcolumns()
+def MakeMenuCSV(column):
+    cols = GetCSVColumns()
     ret_cols = cols.split(",")
     i = 1
     for x in ret_cols:
@@ -142,27 +163,41 @@ def makemenucsv(column):
 
     return get_col_name
 
-def printassoc():
+def PrintColumnsAssociation():
     #print the current dictionary, and return.
     for key,value in assoc.items():
         print "Db Column:", key, "\t CSV Column:", value
     return
 
-def numberoffields():
+def GetNumberOfFields():
     i = 0
     for key,value in assoc.items():
         if value != 0:
             i += 1
     return i
 
+def GenerateAllowedCSVColumns():
+    #this function will generate the CSV columns once. So that they can be read easily during each line.
+    #first clear the current list.
+    global AllowedCSVColumns
+    del AllowedCSVColumns[:]
 
-def readconfig(section,key):
-    #now read configs
+    for key,value in assoc.items():
+        if value != 0:
+            AllowedCSVColumns.append(value)
+    return None
+
+def sanitize(line):
+    #first create a list of allowed
+    #Accept the line, clean and reorder it as per the dictionary, and then return it to be added
+    #to the sql query.
+    new_list = []
+    #just generate a new list containing newly ordered items
+    for x in AllowedCSVColumns:
+        new_list.append(line[x-1])
     
-    config = ConfigParser.ConfigParser()
-    config.readfp(open(config_file))
+    return new_list
 
-    return config.get(section,key)
 def nullify(L):
     """Convert empty strings in the given list to None."""
 
@@ -182,6 +217,7 @@ def loadcsv(cursor, table, filename):
     Assumptions:
      - the first line in the file is a header
     """
+    GenerateAllowedCSVColumns()
     c = open(filename)
     f = csv.reader(c)
     c.seek(0)
@@ -192,7 +228,7 @@ def loadcsv(cursor, table, filename):
     query = buildInsertCmd(table)
 
     for line in f:
-        vals = nullify(line)
+        vals = nullify(sanitize(line))
         cursor.execute(query, vals)
 
     return
@@ -207,8 +243,8 @@ def buildInsertCmd(table):
     >>> buildInsertCmd("foo", 3)
     'insert into foo values (%s, %s, %s)' 
     """
-    cols = getselectedcolumns()
-    numfields = numberoffields()
+    cols = GetSelectedDBColumns()
+    numfields = GetNumberOfFields()
     assert(numfields > 0)
     placeholders = (numfields-1) * "%s, " + "%s"
     query = ("insert into %s(%s)" % (table,cols)) + (" values (%s)" % placeholders)
@@ -217,12 +253,22 @@ def buildInsertCmd(table):
     print "-----------------------"
     return query
 
+
+def readconfig(section,key):
+    #now read configs
+
+    configP = ConfigParser.ConfigParser()
+    configP.readfp(open(config_file))
+
+    return configP.get(section,key)
+
+
 if __name__ == '__main__':
     # commandline execution
 
     args = sys.argv[1:]
     if(len(args) < 1):
-        print "error: arguments: csvfile config_file"
+        print "error: arguments: config_file"
         sys.exit(1)
 
     main(*args)
