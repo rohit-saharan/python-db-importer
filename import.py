@@ -1,14 +1,7 @@
 #!/usr/bin/env python
 
 # Run with no args for usage instructions
-#
-# Notes:
-#  - will probably insert duplicate records if you load the same file twice
-#  - assumes that the number of fields in the header row is the same
-#    as the number of columns in the rest of the file and in the database
-#  - assumes the column order is the same in the file and in the database
-#
-# Speed: ~ 1s/MB
+# Speed: ~ 1MB/s
 # 
 
 import sys
