@@ -1,0 +1,3 @@
+This project was created when I needed to import different formats of csv files, with varying columns, into existing mysql tables.
+
+I would like to extend this project to not only read csv files, but also excel, openxml, and other varying file formats.
