@@ -41,6 +41,7 @@ def main(config):
     #loadcsv(cursor, table, csvfile)
 
     cursor.close()
+    conn.commit()
     conn.close()
 
 def getconn(user, db, passwd=""):
